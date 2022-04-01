@@ -55,7 +55,7 @@ class PatmosCore(binFile: String, nr: Int, cnt: Int) extends Module {
       Module(new NullICache()) // return at least a dummy cache
     }
 
-  val fetch = Module(new Fetch(binFile))
+  val fetch = Module(new Fetch(Right(binFile)))
   val decode = Module(new Decode())
   val execute = Module(new Execute())
   val memory = Module(new Memory())

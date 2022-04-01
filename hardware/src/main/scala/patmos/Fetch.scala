@@ -16,9 +16,11 @@ import Constants._
 
 import util.Utility
 import util.BlackBoxRom
+import util.BlackBoxRomIO
 
-class Fetch(fileName : String) extends Module {
-  val io = IO(new FetchIO())
+class Fetch(init : Either[Int, String]) extends Module {
+  // If the memory is specified via a int, it is writable.
+  val io = IO(new FetchIO(init.isLeft))
 
   val pcReg = RegInit(UInt(1, PC_SIZE))
   val pcNext = dontTouch(Wire(UInt(PC_SIZE.W))) // for emulator
@@ -27,10 +29,43 @@ class Fetch(fileName : String) extends Module {
   val addrEvenReg = Reg(init = UInt(2, PC_SIZE), next = addrEven)
   val addrOddReg = Reg(init = UInt(1, PC_SIZE), next = addrOdd)
 
-  // Instantiate dual issue ROM
-  val romContents = Utility.binToDualRom(fileName, INSTR_WIDTH)
-  val romAddrUInt = log2Up(romContents._1.length)
-  val rom = Module(new BlackBoxRom(romContents, romAddrUInt))
+  val (mem_io, romAddrUInt) = init match{
+    case Right(binary) => {
+      // Instantiate dual issue ROM
+      val romContents = Utility.binToDualRom(binary, INSTR_WIDTH)
+      val romAddrUInt = log2Up(romContents._1.length)
+
+      val rom = Module(new BlackBoxRom(romContents, romAddrUInt))
+
+      (rom.io, romAddrUInt)
+    }
+
+    case Left(amount) => {
+      val write = io.write.get
+      
+      val promEven = MemBlock(amount / 2, INSTR_WIDTH)
+      promEven.io.wrEna := write.en & !write.addr(0)
+      promEven.io.wrAddr := write.addr >> 1
+      promEven.io.wrData := write.data
+
+      val promOdd = MemBlock(amount / 2, INSTR_WIDTH)
+      promOdd.io.wrEna := write.en & write.addr(0)
+      promOdd.io.wrAddr := write.addr >> 1
+      promOdd.io.wrData := write.data
+
+      val romAddrUInt = log2Up(amount)
+      val mem_io = new BlackBoxRomIO(romAddrUInt)
+      mem_io.addressEven := promEven.io.rdAddr
+      mem_io.addressOdd := promOdd.io.rdAddr
+      mem_io.instructionEven := promEven.io.rdData
+      mem_io.instructionOdd := promOdd.io.rdData
+
+      (mem_io, romAddrUInt)
+    }
+     
+  }
+  
+  
 
   
   val instr_a_ispm = Wire(UInt())
@@ -101,10 +136,10 @@ class Fetch(fileName : String) extends Module {
   // val data_even = RegNext(romEven(addrEven(romAddrUInt, 1)))
   // val data_odd = RegNext(romOdd(addrOdd(romAddrUInt, 1)))
 
-  rom.io.addressEven := addrEven(romAddrUInt, 1)
-  rom.io.addressOdd := addrOdd(romAddrUInt, 1)
-  val data_even = RegNext(rom.io.instructionEven)
-  val data_odd = RegNext(rom.io.instructionOdd)
+  mem_io.addressEven := addrEven(romAddrUInt, 1)
+  mem_io.addressOdd := addrOdd(romAddrUInt, 1)
+  val data_even = RegNext(mem_io.instructionEven)
+  val data_odd = RegNext(mem_io.instructionOdd)
   
   val instr_a_rom = Mux(pcReg(0) === UInt(0), data_even, data_odd)
   val instr_b_rom = Mux(pcReg(0) === UInt(0), data_odd, data_even)
