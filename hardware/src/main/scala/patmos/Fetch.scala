@@ -16,6 +16,7 @@ import Constants._
 
 import util.Utility
 import util.BlackBoxRom
+import util.Prom
 
 class Fetch(fileName : String) extends Module {
   val io = IO(new FetchIO())
@@ -29,10 +30,28 @@ class Fetch(fileName : String) extends Module {
 
   // Instantiate dual issue ROM
   val romContents = Utility.binToDualRom(fileName, INSTR_WIDTH)
-  val romAddrUInt = log2Up(romContents._1.length)
+  val amount = romContents._1.length
+  val romAddrUInt = log2Up(amount)
   val rom = Module(new BlackBoxRom(romContents, romAddrUInt))
 
-  
+  val prom = Module(new Prom(amount, romAddrUInt))
+
+  val counter = RegInit(0.U(romAddrUInt.W))
+  val enable = Wire(Bool())
+  enable := counter > amount.U
+
+  prom.io.enEven := enable
+  prom.io.writeDataEven := rom.io.instructionEven
+  prom.io.writeAddrEven := Reg(counter)
+
+  prom.io.enOdd := enable
+  prom.io.writeDataOdd := rom.io.instructionOdd
+  prom.io.writeAddrOdd := Reg(counter)
+
+  when (enable){
+    counter := 4.U + counter
+  }
+
   val instr_a_ispm = Wire(UInt())
   val instr_b_ispm = Wire(UInt())
   instr_a_ispm := UInt(0)
@@ -71,7 +90,7 @@ class Fetch(fileName : String) extends Module {
   selSpm := selSpmNext
   selCacheNext := selCache
   selCache := selCacheNext
-  when (io.ena) {
+  when (io.ena && enable) {
     selSpmNext := io.icachefe.memSel(1)
     selCacheNext := io.icachefe.memSel(0)
   }
@@ -87,7 +106,7 @@ class Fetch(fileName : String) extends Module {
   relBaseReg := relBaseNext
   relocNext := relocReg
   relocReg := relocNext
-  when(io.ena) {
+  when(io.ena && enable ) {
     baseReg := io.icachefe.base
     when (io.memfe.doCallRet) {
       relBaseNext := io.icachefe.relBase
@@ -101,10 +120,10 @@ class Fetch(fileName : String) extends Module {
   // val data_even = RegNext(romEven(addrEven(romAddrUInt, 1)))
   // val data_odd = RegNext(romOdd(addrOdd(romAddrUInt, 1)))
 
-  rom.io.addressEven := addrEven(romAddrUInt, 1)
-  rom.io.addressOdd := addrOdd(romAddrUInt, 1)
-  val data_even = RegNext(rom.io.instructionEven)
-  val data_odd = RegNext(rom.io.instructionOdd)
+  prom.io.addressEven := addrEven(romAddrUInt, 1)
+  prom.io.addressOdd := addrOdd(romAddrUInt, 1)
+  val data_even = RegNext(prom.io.instructionEven)
+  val data_odd = RegNext(prom.io.instructionOdd)
   
   val instr_a_rom = Mux(pcReg(0) === UInt(0), data_even, data_odd)
   val instr_b_rom = Mux(pcReg(0) === UInt(0), data_odd, data_even)
@@ -136,7 +155,7 @@ class Fetch(fileName : String) extends Module {
   val pc_inc = Mux(pc_next(0), pc_next2, pc_next)
   addrEven := addrEvenReg
   addrOdd := addrOddReg
-  when(io.ena && !reset) {
+  when(io.ena && !reset && enable) {
     addrEven := Cat((pc_inc)(PC_SIZE - 1, 1), UInt(0)).asUInt
     addrOdd := Cat((pc_next)(PC_SIZE - 1, 1), UInt(1)).asUInt
     pcReg := pcNext //is pc_next - needed for emulator
