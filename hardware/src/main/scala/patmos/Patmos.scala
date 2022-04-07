@@ -248,6 +248,9 @@ class Patmos(configFile: String, binFile : String, datFile: String) extends Modu
     val counter = RegInit(0.U(romAddrUInt.W))
 
     val writing = counter <= amount.U
+    when (writing){
+      counter := 4.U + counter
+    }
 
     for(i <- 0 until nrCores){
       cores(i).reset := writing
