@@ -26,7 +26,7 @@ import scala.collection.mutable
 /**
  * Module for one Patmos core.
  */
-class PatmosCore(binFile: String, nr: Int, cnt: Int) extends Module {
+class PatmosCore(bootMem:  Either[Int, String], nr: Int, cnt: Int) extends Module {
 
   val io = IO(new Bundle() with HasSuperMode with HasPerfCounter with HasInterrupts {
     override val superMode = Bool(OUTPUT)
@@ -37,6 +37,7 @@ class PatmosCore(binFile: String, nr: Int, cnt: Int) extends Module {
     val excInOut = new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH)
     val mmuInOut = new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH)
     val copInOut = Vec(COP_COUNT, new CoprocessorIO())
+    val write = if (bootMem.isRight) None else Some(new Write(ADDR_WIDTH).asInput)
   })
 
   val icache =
@@ -55,7 +56,7 @@ class PatmosCore(binFile: String, nr: Int, cnt: Int) extends Module {
       Module(new NullICache()) // return at least a dummy cache
     }
 
-  val fetch = Module(new Fetch(Right(binFile)))
+  val fetch = Module(new Fetch(bootMem))
   val decode = Module(new Decode())
   val execute = Module(new Execute())
   val memory = Module(new Memory())
@@ -63,6 +64,13 @@ class PatmosCore(binFile: String, nr: Int, cnt: Int) extends Module {
   val exc = Module(new Exceptions())
   
   val dcache = Module(new DataCache())
+
+  (fetch.io.write, io.write) match{
+    case (Some(recv), Some(send)) => 
+      recv := send
+    
+    case _ => ()
+  }
 
   //connect icache
   icache.io.feicache <> fetch.io.feicache
@@ -220,7 +228,7 @@ class Patmos(configFile: String, binFile: String, datFile: String) extends Modul
   println("Config core count: " + nrCores)
 
   // Instantiate cores
-  val cores = (0 until nrCores).map(i => Module(new PatmosCore(binFile, i, nrCores)))
+  val cores = (0 until nrCores).map(i => Module(new PatmosCore(Right(binFile), i, nrCores)))
 
   // Forward ports to/from core
   println("Config cmp: ")

@@ -296,10 +296,13 @@ class RegFileIO() extends Bundle() {
   val rfWrite = Vec(PIPE_COUNT, new Result().asInput )
 }
 
-class Write extends Bundle{
-  val en = Bool(INPUT)
-  val addr = UInt(width = ADDR_WIDTH)
-  val data = UInt(width = DATA_WIDTH)
+class Write(addrWidth : Int) extends Bundle{
+    val enEven = Input(Bool())
+    val addrEven = Input(UInt(addrWidth))
+    val dataEven = Input(UInt(INSTR_WIDTH))
+    val enOdd = Input(Bool())
+    val addrOdd = Input(UInt(addrWidth))
+    val dataOdd = Input(UInt(INSTR_WIDTH))
 }
 
 class FetchIO(writable:Boolean) extends Bundle() {
@@ -314,7 +317,7 @@ class FetchIO(writable:Boolean) extends Bundle() {
   // connections to instruction cache
   val feicache = new FeICache().asOutput
   val icachefe = new ICacheFe().asInput
-  val write = if (!writable) None else Some(new Write)
+  val write = if (!writable) None else Some(new Write(ADDR_WIDTH).asInput)
 }
 
 class ExcDec() extends Bundle() {

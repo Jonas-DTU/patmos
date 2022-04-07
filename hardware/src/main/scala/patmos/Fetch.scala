@@ -14,13 +14,11 @@ import chisel3.dontTouch
 
 import Constants._
 
-import util.Utility
-import util.BlackBoxRom
-import util.BlackBoxRomIO
+import util._
 
-class Fetch(init : Either[Int, String]) extends Module {
+class Fetch(memory :  Either[Int, String]) extends Module {
   // If the memory is specified via a int, it is writable.
-  val io = IO(new FetchIO(init.isLeft))
+  val io = IO(new FetchIO(memory.isLeft))
 
   val pcReg = RegInit(UInt(1, PC_SIZE))
   val pcNext = dontTouch(Wire(UInt(PC_SIZE.W))) // for emulator
@@ -29,38 +27,28 @@ class Fetch(init : Either[Int, String]) extends Module {
   val addrEvenReg = Reg(init = UInt(2, PC_SIZE), next = addrEven)
   val addrOddReg = Reg(init = UInt(1, PC_SIZE), next = addrOdd)
 
-  val (mem_io, romAddrUInt) = init match{
+  val (mem_io, romAddrUInt) = memory match{
     case Right(binary) => {
       // Instantiate dual issue ROM
       val romContents = Utility.binToDualRom(binary, INSTR_WIDTH)
-      val romAddrUInt = log2Up(romContents._1.length)
+      val romAddrUInt = util.log2Up(romContents._1.length)
 
       val rom = Module(new BlackBoxRom(romContents, romAddrUInt))
+
+      val mem_io = new BlackBoxRomIO(romAddrUInt)
 
       (rom.io, romAddrUInt)
     }
 
     case Left(amount) => {
+      val romAddrUInt = util.log2Up(amount)
+      val prom = Module(new PRom(amount, romAddrUInt))
+
       val write = io.write.get
       
-      val promEven = MemBlock(amount / 2, INSTR_WIDTH)
-      promEven.io.wrEna := write.en & !write.addr(0)
-      promEven.io.wrAddr := write.addr >> 1
-      promEven.io.wrData := write.data
+      prom.io.write := write
 
-      val promOdd = MemBlock(amount / 2, INSTR_WIDTH)
-      promOdd.io.wrEna := write.en & write.addr(0)
-      promOdd.io.wrAddr := write.addr >> 1
-      promOdd.io.wrData := write.data
-
-      val romAddrUInt = log2Up(amount)
-      val mem_io = new BlackBoxRomIO(romAddrUInt)
-      mem_io.addressEven := promEven.io.rdAddr
-      mem_io.addressOdd := promOdd.io.rdAddr
-      mem_io.instructionEven := promEven.io.rdData
-      mem_io.instructionOdd := promOdd.io.rdData
-
-      (mem_io, romAddrUInt)
+      (prom.io, romAddrUInt)
     }
      
   }
@@ -76,7 +64,7 @@ class Fetch(init : Either[Int, String]) extends Module {
   
 
   if (ISPM_SIZE > 0) {
-    val ispmAddrUInt = log2Up(ISPM_SIZE / 4 / 2)
+    val ispmAddrUInt = util.log2Up(ISPM_SIZE / 4 / 2)
     val memEven = MemBlock(ISPM_SIZE / 4 / 2, INSTR_WIDTH, bypass = false)
     val memOdd = MemBlock(ISPM_SIZE / 4 / 2, INSTR_WIDTH, bypass = false)
 
@@ -138,8 +126,8 @@ class Fetch(init : Either[Int, String]) extends Module {
 
   mem_io.addressEven := addrEven(romAddrUInt, 1)
   mem_io.addressOdd := addrOdd(romAddrUInt, 1)
-  val data_even = RegNext(mem_io.instructionEven)
-  val data_odd = RegNext(mem_io.instructionOdd)
+  val data_even = RegNext(Wire(mem_io.instructionEven))
+  val data_odd = RegNext(Wire(mem_io.instructionOdd))
   
   val instr_a_rom = Mux(pcReg(0) === UInt(0), data_even, data_odd)
   val instr_b_rom = Mux(pcReg(0) === UInt(0), data_odd, data_even)
