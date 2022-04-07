@@ -297,12 +297,12 @@ class RegFileIO() extends Bundle() {
 }
 
 class Write(addrWidth : Int) extends Bundle{
-    val enEven = Input(Bool())
-    val addrEven = Input(UInt(addrWidth))
-    val dataEven = Input(UInt(INSTR_WIDTH))
-    val enOdd = Input(Bool())
-    val addrOdd = Input(UInt(addrWidth))
-    val dataOdd = Input(UInt(INSTR_WIDTH))
+    val enEven = Bool()
+    val addrEven = UInt(addrWidth)
+    val dataEven = UInt(INSTR_WIDTH)
+    val enOdd = Bool()
+    val addrOdd = UInt(addrWidth)
+    val dataOdd = UInt(INSTR_WIDTH)
 }
 
 class FetchIO(writable:Boolean) extends Bundle() {

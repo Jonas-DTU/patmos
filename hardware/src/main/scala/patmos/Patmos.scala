@@ -26,7 +26,7 @@ import scala.collection.mutable
 /**
  * Module for one Patmos core.
  */
-class PatmosCore(bootMem:  Either[Int, String], nr: Int, cnt: Int) extends Module {
+class PatmosCore(bootMem: Either[Int, String], nr: Int, cnt: Int) extends Module {
 
   val io = IO(new Bundle() with HasSuperMode with HasPerfCounter with HasInterrupts {
     override val superMode = Bool(OUTPUT)
@@ -218,17 +218,55 @@ final class PatmosBundle(elts: (String, Data)*) extends Record {
 /**
  * The main (top-level) component of Patmos.
  */
-class Patmos(configFile: String, binFile: String, datFile: String) extends Module {
+class Patmos(configFile: String, binFile : String, datFile: String) extends Module { 
   Config.loadConfig(configFile)
   Config.minPcWidth = util.log2Up((new File(binFile)).length.toInt / 4)
   Config.datFile = datFile
   val config = Config.getConfig
   val nrCores = config.coreCount
 
+  val prom = false
+
+  val bootMem = if (prom) 
+      Left((new File(binFile)).length.toInt) 
+    else 
+      Right(binFile)
+
   println("Config core count: " + nrCores)
 
   // Instantiate cores
-  val cores = (0 until nrCores).map(i => Module(new PatmosCore(Right(binFile), i, nrCores)))
+  val cores = (0 until nrCores).map(i => Module(new PatmosCore(bootMem, i, nrCores)))
+  
+  if (prom) {
+    val romContents = Utility.binToDualRom(binFile, INSTR_WIDTH)
+    val amount = romContents._1.length
+    val romAddrUInt = util.log2Up(amount)
+
+    // Rom for debugging
+    val rom = Module(new BlackBoxRom(romContents, romAddrUInt))
+
+    val counter = RegInit(0.U(romAddrUInt.W))
+
+    val writing = counter <= amount.U
+
+    for(i <- 0 until nrCores){
+      cores(i).reset := writing
+
+      rom.io.addressEven := counter
+      rom.io.addressOdd := counter
+      
+      val write = cores(i).io.write.get
+
+      write.enEven := writing
+      write.addrEven := Reg(counter)
+      write.dataEven := rom.io.instructionEven
+
+      write.enOdd := writing
+      write.addrOdd := Reg(counter)
+      write.dataOdd := rom.io.instructionOdd
+    }
+  }
+
 
   // Forward ports to/from core
   println("Config cmp: ")
