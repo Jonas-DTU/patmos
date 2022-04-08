@@ -296,6 +296,17 @@ class RegFileIO() extends Bundle() {
   val rfWrite = Vec(PIPE_COUNT, new Result().asInput )
 }
 
+class PRomIO(addrWidth : Int) extends BlackBoxRomIO(addrWidth){
+    val write = Input(new Write(addrWidth))
+}
+
+class BlackBoxRomIO(addrWidth : Int) extends Bundle {
+    val addressEven = Input(UInt(addrWidth.W))
+    val addressOdd = Input(UInt(addrWidth.W))
+    val instructionEven = Output(UInt(INSTR_WIDTH.W))
+    val instructionOdd = Output(UInt(INSTR_WIDTH.W))
+}
+
 class Write(addrWidth : Int) extends Bundle{
     val enEven = Bool()
     val addrEven = UInt(width = addrWidth)

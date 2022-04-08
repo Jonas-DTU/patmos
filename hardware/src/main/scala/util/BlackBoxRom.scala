@@ -11,14 +11,8 @@ package util
 
 import chisel3._
 import chisel3.util.HasBlackBoxInline
+import patmos._
 import patmos.Constants._
-
-class BlackBoxRomIO(addrWidth : Int) extends Bundle {
-    val addressEven = Input(UInt(addrWidth.W))
-    val addressOdd = Input(UInt(addrWidth.W))
-    val instructionEven = Output(UInt(INSTR_WIDTH.W))
-    val instructionOdd = Output(UInt(INSTR_WIDTH.W))
-}
 
 class BlackBoxRom(romContents : (Array[BigInt], Array[BigInt]), addrWidth : Int) extends BlackBox with HasBlackBoxInline {
     

@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Webtalk v2020.2 (64-bit)
+# SW Build 3064766 on Wed Nov 18 09:12:47 MST 2020
+# IP Build 3064653 on Wed Nov 18 14:17:31 MST 2020
+# Start of session at: Thu Apr  7 20:58:31 2022
+# Process ID: 28994
+# Current directory: /home/mads/Desktop/patmos
+# Command line: wbtcv -mode batch -source /home/mads/Desktop/patmos/hardware/vivado/basys3/basys3.hw/webtalk/labtool_webtalk.tcl -notrace
+# Log file: /home/mads/Desktop/patmos/webtalk.log
+# Journal file: /home/mads/Desktop/patmos/webtalk.jou
+#-----------------------------------------------------------
+source /home/mads/Desktop/patmos/hardware/vivado/basys3/basys3.hw/webtalk/labtool_webtalk.tcl -notrace

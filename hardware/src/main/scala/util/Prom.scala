@@ -4,11 +4,6 @@ import chisel3._
 import patmos._
 import patmos.Constants._
 
-
-class PRomIO(addrWidth : Int) extends BlackBoxRomIO(addrWidth){
-    val write = Input(new Write(addrWidth))
-}
-
 class PRom(amount : Int, addrWidth : Int) extends Module{
     val io = IO(new PRomIO(addrWidth))
       
