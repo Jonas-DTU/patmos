@@ -126,8 +126,8 @@ class Fetch(memory :  Either[Int, String]) extends Module {
 
   mem_io.addressEven := addrEven(romAddrUInt, 1)
   mem_io.addressOdd := addrOdd(romAddrUInt, 1)
-  val data_even = RegNext(Wire(mem_io.instructionEven))
-  val data_odd = RegNext(Wire(mem_io.instructionOdd))
+  val data_even = RegNext(mem_io.instructionEven)
+  val data_odd = RegNext(mem_io.instructionOdd)
   
   val instr_a_rom = Mux(pcReg(0) === UInt(0), data_even, data_odd)
   val instr_b_rom = Mux(pcReg(0) === UInt(0), data_odd, data_even)
