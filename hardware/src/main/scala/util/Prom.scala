@@ -17,8 +17,8 @@ class PRom(amount : Int, addrWidth : Int) extends Module{
     promOdd.io.wrAddr := io.write.addrOdd
     promOdd.io.wrData := io.write.dataOdd
 
-    io.addressEven := promEven.io.rdAddr
-    io.addressOdd := promOdd.io.rdAddr
+    promEven.io.rdAddr := io.addressEven
+    promOdd.io.rdAddr := io.addressOdd
     io.instructionEven := promEven.io.rdData
     io.instructionOdd := promOdd.io.rdData
 

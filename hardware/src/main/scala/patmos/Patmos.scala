@@ -252,13 +252,15 @@ class Patmos(configFile: String, binFile : String, datFile: String) extends Modu
       counter := 4.U + counter
     }
 
-    for(i <- 0 until nrCores){
-      cores(i).reset := writing
-
+    for(core <- cores){
+      when(writing){
+        core.reset := true.B
+      }
+      
       rom.io.addressEven := counter
       rom.io.addressOdd := counter
       
-      val write = cores(i).io.write.get
+      val write = core.io.write.get
 
       write.enEven := writing
       write.addrEven := Reg(counter)
