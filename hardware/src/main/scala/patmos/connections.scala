@@ -314,6 +314,10 @@ class Write(addrWidth : Int) extends Bundle{
     val enOdd = Bool()
     val addrOdd = UInt(width = addrWidth)
     val dataOdd = UInt(width = INSTR_WIDTH)
+
+    override def cloneType() = {
+      Write.this
+    }
 }
 
 class FetchIO(writable:Boolean) extends Bundle() {
