@@ -225,7 +225,7 @@ class Patmos(configFile: String, binFile : String, datFile: String) extends Modu
   val config = Config.getConfig
   val nrCores = config.coreCount
 
-  val prom = false
+  val prom = true
 
   val bootMem = if (prom) 
       Left((new File(binFile)).length.toInt) 
@@ -240,21 +240,22 @@ class Patmos(configFile: String, binFile : String, datFile: String) extends Modu
   if (prom) {
     val romContents = Utility.binToDualRom(binFile, INSTR_WIDTH)
     val amount = romContents._1.length
-    val romAddrUInt = util.log2Up(amount)
+    val romAddrUInt = util.log2Up(amount + 1)
 
     // Rom for debugging
     val rom = Module(new BlackBoxRom(romContents, romAddrUInt))
 
-    val counter = RegInit(0.U(romAddrUInt.W))
+    val counter = RegInit(UInt(0, (romAddrUInt)))
 
-    val writing = counter <= amount.U
+    val writing = Wire(Bool())
+    writing := counter <= UInt(amount)
     when (writing){
-      counter := 4.U + counter
+      counter := counter + UInt(1)
     }
 
     for(core <- cores){
       when(writing){
-        core.reset := true.B
+        core.reset := Bool(true)
       }
       
       rom.io.addressEven := counter
@@ -263,11 +264,11 @@ class Patmos(configFile: String, binFile : String, datFile: String) extends Modu
       val write = core.io.write.get
 
       write.enEven := writing
-      write.addrEven := Reg(counter)
+      write.addrEven := counter
       write.dataEven := rom.io.instructionEven
 
       write.enOdd := writing
-      write.addrOdd := Reg(counter)
+      write.addrOdd := counter
       write.dataOdd := rom.io.instructionOdd
     }
   }

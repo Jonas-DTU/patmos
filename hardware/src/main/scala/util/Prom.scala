@@ -7,12 +7,12 @@ import patmos.Constants._
 class PRom(amount : Int, addrWidth : Int) extends Module{
     val io = IO(new PRomIO(addrWidth))
       
-    val promEven = MemBlock(amount / 2, INSTR_WIDTH)
+    val promEven = Module(new AsyncMemBlock(amount / 2, INSTR_WIDTH))
     promEven.io.wrEna := io.write.enEven
     promEven.io.wrAddr := io.write.addrEven
     promEven.io.wrData := io.write.dataEven
 
-    val promOdd = MemBlock(amount / 2, INSTR_WIDTH)
+    val promOdd = Module(new AsyncMemBlock(amount / 2, INSTR_WIDTH))
     promOdd.io.wrEna := io.write.enOdd
     promOdd.io.wrAddr := io.write.addrOdd
     promOdd.io.wrData := io.write.dataOdd
