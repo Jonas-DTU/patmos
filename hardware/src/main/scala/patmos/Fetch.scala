@@ -30,9 +30,6 @@ class Fetch(memory :  Either[Int, String]) extends Module {
   val (mem_io, romAddrUInt) = memory match{
     case Right(binary) => {
       // Instantiate dual issue ROM
-    for (i <- 0 until 20){
-      println("RIGHT ROM")
-    }
       val romContents = Utility.binToDualRom(binary, INSTR_WIDTH)
       val romAddrUInt = util.log2Up(romContents._1.length)
 
@@ -43,9 +40,6 @@ class Fetch(memory :  Either[Int, String]) extends Module {
 
     case Left(amount) => {
 
-    for (i <- 0 until 20){
-      println("LEFT PROM")
-    }
       val romAddrUInt = util.log2Up(amount)
       val prom = Module(new PRom(amount, romAddrUInt))
 
